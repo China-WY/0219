@@ -22,20 +22,28 @@ class Flower {
     }
 
     /**
-     * 创建花茎
+     * 创建花茎（使用三次样条曲线模拟自然弯曲）
      */
     createStem(growth = 1) {
         const points = [];
-        const segments = 10;
+        const segments = 20;  // 增加分段数使曲线更平滑
         const height = growth * CONFIG.flower.stem.baseHeight;
 
+        // 使用正弦和多项式组合创建更自然的弯曲
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
-            points.push(new THREE.Vector3(
-                Math.sin(t * Math.PI * 0.5) * 0.15 * growth,
-                t * height,
-                Math.sin(t * Math.PI * 0.5) * 0.08 * growth
-            ));
+            // 主弯曲 - 使用正弦函数
+            const mainBend = Math.sin(t * Math.PI * 0.5) * 0.2 * growth;
+            // 次弯曲 - 增加自然的不规则感
+            const secondaryBend = Math.sin(t * Math.PI * 1.5) * 0.08 * growth;
+            // 顶部弯曲 - 模拟花朵重量导致的下垂
+            const tipBend = Math.pow(t, 2.5) * 0.12 * growth;
+
+            const x = mainBend + secondaryBend + tipBend;
+            const z = Math.sin(t * Math.PI * 0.8) * 0.1 * growth;
+            const y = t * height * (1 - 0.05 * Math.sin(t * Math.PI)); // 稍微压缩底部
+
+            points.push(new THREE.Vector3(x, y, z));
         }
 
         this.stemCurve = new THREE.CatmullRomCurve3(points);
@@ -60,16 +68,46 @@ class Flower {
     }
 
     /**
-     * 创建向日葵花瓣（长而尖）
+     * 创建向日葵花瓣（长而尖，带波浪边缘）
      */
     createPetal(length, width) {
         const shape = new THREE.Shape();
-        // 向日葵花瓣形状：细长，尖端尖锐
+        // 使用三次贝塞尔曲线创建更自然的花瓣形状
         shape.moveTo(0, 0);
-        shape.quadraticCurveTo(width * 0.3, length * 0.3, width * 0.5, length * 0.7);
-        shape.quadraticCurveTo(width * 0.6, length * 0.9, 0, length);
-        shape.quadraticCurveTo(-width * 0.6, length * 0.9, -width * 0.5, length * 0.7);
-        shape.quadraticCurveTo(-width * 0.3, length * 0.3, 0, 0);
+
+        // 左侧边缘 - 多个三次贝塞尔曲线创建波浪效果
+        shape.bezierCurveTo(
+            width * 0.15, length * 0.1,      // 控制点1
+            width * 0.35, length * 0.25,     // 控制点2
+            width * 0.45, length * 0.45      // 终点1
+        );
+        shape.bezierCurveTo(
+            width * 0.55, length * 0.6,      // 控制点1
+            width * 0.5, length * 0.8,       // 控制点2
+            width * 0.4, length * 0.85       // 终点2
+        );
+        shape.bezierCurveTo(
+            width * 0.25, length * 0.9,      // 控制点1
+            width * 0.1, length * 0.95,      // 控制点2
+            0, length                         // 尖端
+        );
+
+        // 右侧边缘 - 镜像但稍作变化增加自然感
+        shape.bezierCurveTo(
+            -width * 0.1, length * 0.95,     // 控制点1
+            -width * 0.25, length * 0.9,     // 控制点2
+            -width * 0.4, length * 0.85      // 终点1
+        );
+        shape.bezierCurveTo(
+            -width * 0.5, length * 0.8,      // 控制点1
+            -width * 0.55, length * 0.6,     // 控制点2
+            -width * 0.45, length * 0.45     // 终点2
+        );
+        shape.bezierCurveTo(
+            -width * 0.35, length * 0.25,    // 控制点1
+            -width * 0.15, length * 0.1,     // 控制点2
+            0, 0                             // 回到起点
+        );
 
         const extrudeSettings = {
             steps: 1,
@@ -150,16 +188,61 @@ class Flower {
     }
 
     /**
-     * 创建向日葵叶子（大而宽）
+     * 创建向日葵叶子（大而宽，带叶脉和波浪边缘）
      */
     createLeaf(length, width) {
         const shape = new THREE.Shape();
-        // 向日葵叶子形状：宽大，心形
+        // 使用三次贝塞尔曲线创建带波浪边缘的叶子形状
         shape.moveTo(0, 0);
-        shape.quadraticCurveTo(width * 0.5, -length * 0.2, width, 0);
-        shape.quadraticCurveTo(width * 0.7, length * 0.3, 0, length);
-        shape.quadraticCurveTo(-width * 0.7, length * 0.3, -width, 0);
-        shape.quadraticCurveTo(-width * 0.5, -length * 0.2, 0, 0);
+
+        // 叶子左侧边缘 - 带波浪
+        shape.bezierCurveTo(
+            width * 0.3, -length * 0.15,     // 控制点1
+            width * 0.7, -length * 0.1,      // 控制点2
+            width, 0                         // 终点
+        );
+        // 叶尖
+        shape.bezierCurveTo(
+            width * 0.85, length * 0.15,     // 控制点1
+            width * 0.65, length * 0.35,     // 控制点2
+            width * 0.5, length * 0.5        // 终点
+        );
+        shape.bezierCurveTo(
+            width * 0.35, length * 0.7,      // 控制点1
+            width * 0.2, length * 0.85,      // 控制点2
+            0, length                        // 叶尖
+        );
+
+        // 叶子右侧边缘 - 带波浪（镜像）
+        shape.bezierCurveTo(
+            -width * 0.2, length * 0.85,    // 控制点1
+            -width * 0.35, length * 0.7,     // 控制点2
+            -width * 0.5, length * 0.5      // 终点
+        );
+        shape.bezierCurveTo(
+            -width * 0.65, length * 0.35,    // 控制点1
+            -width * 0.85, length * 0.15,    // 控制点2
+            -width, 0                        // 终点
+        );
+        shape.bezierCurveTo(
+            -width * 0.7, -length * 0.1,     // 控制点1
+            -width * 0.3, -length * 0.15,    // 控制点2
+            0, 0                             // 回到起点
+        );
+
+        // 添加叶脉（使用 holes）
+        const holes = [];
+        // 主叶脉
+        const mainVein = new THREE.Path();
+        mainVein.moveTo(0, 0);
+        mainVein.bezierCurveTo(
+            width * 0.05, length * 0.25,
+            -width * 0.05, length * 0.5,
+            0, length * 0.75
+        );
+        holes.push(mainVein);
+
+        shape.holes = holes;
 
         const extrudeSettings = {
             steps: 1,
