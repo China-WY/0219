@@ -1,11 +1,12 @@
 // ============================================================
-// 环境创建模块（地面、草、星星）
+// 环境创建模块（地面、草、白云）
 // ============================================================
 
 class Environment {
     constructor(scene) {
         this.scene = scene;
         this.grassBlades = [];
+        this.clouds = [];
     }
 
     /**
@@ -46,9 +47,9 @@ class Environment {
             const mound = new THREE.Mesh(geometry, material);
             mound.scale.y = 0.4;
             mound.position.set(
-                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 12,
                 0,
-                (Math.random() - 0.5) * 10
+                (Math.random() - 0.5) * 12
             );
 
             // 避免在花朵中心位置
@@ -107,6 +108,54 @@ class Environment {
     }
 
     /**
+     * 创建白云
+     */
+    createClouds() {
+        const cloudCount = 5;
+
+        for (let c = 0; c < cloudCount; c++) {
+            const cloudGroup = new THREE.Group();
+            const puffCount = 3 + Math.floor(Math.random() * 3);
+
+            for (let p = 0; p < puffCount; p++) {
+                const radius = 1.5 + Math.random() * 1.5;
+                const geometry = new THREE.SphereGeometry(radius, 16, 16);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.9,
+                    flatShading: true
+                });
+
+                const puff = new THREE.Mesh(geometry, material);
+                puff.position.set(
+                    (Math.random() - 0.5) * 3,
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 2
+                );
+                puff.castShadow = false;
+                puff.receiveShadow = false;
+
+                cloudGroup.add(puff);
+            }
+
+            // 随机位置在天空中
+            cloudGroup.position.set(
+                (Math.random() - 0.5) * 40,
+                15 + Math.random() * 10,
+                (Math.random() - 0.5) * 40
+            );
+
+            cloudGroup.userData = {
+                speed: 0.005 + Math.random() * 0.01
+            };
+
+            this.clouds.push(cloudGroup);
+            this.scene.add(cloudGroup);
+        }
+    }
+
+    /**
      * 更新草的摆动
      */
     updateGrass(time) {
@@ -118,34 +167,17 @@ class Environment {
     }
 
     /**
-     * 创建星星
+     * 更新云的移动
      */
-    createStars() {
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(CONFIG.stars.count * 3);
+    updateClouds(time) {
+        this.clouds.forEach((cloud) => {
+            cloud.position.x += cloud.userData.speed;
 
-        for (let i = 0; i < CONFIG.stars.count; i++) {
-            const radius = CONFIG.stars.minRadius +
-                Math.random() * (CONFIG.stars.maxRadius - CONFIG.stars.minRadius);
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI * 0.5;
-
-            positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-            positions[i * 3 + 1] = radius * Math.cos(phi) + CONFIG.stars.baseY;
-            positions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
-        }
-
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-        const material = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: CONFIG.stars.size,
-            transparent: true,
-            opacity: CONFIG.stars.opacity
+            // 循环移动
+            if (cloud.position.x > 30) {
+                cloud.position.x = -30;
+            }
         });
-
-        const stars = new THREE.Points(geometry, material);
-        this.scene.add(stars);
     }
 
     /**
@@ -154,6 +186,6 @@ class Environment {
     init() {
         this.createGround();
         this.createGrass();
-        this.createStars();
+        this.createClouds();
     }
 }

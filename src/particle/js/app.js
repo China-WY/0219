@@ -85,8 +85,9 @@ class FlowerApp {
             this.progressElement.textContent = `生长进度: ${progress}%`;
         }
 
-        // 更新草的摆动
+        // 更新草的摆动和云的移动
         this.environment.updateGrass(this.time);
+        this.environment.updateClouds(this.time);
 
         // 更新控制器和渲染
         this.sceneManager.controls.update();

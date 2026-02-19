@@ -1,14 +1,15 @@
 // ============================================================
-// 花朵创建和管理模块
+// 向日葵创建和管理模块
 // ============================================================
 
 class Flower {
     constructor(scene) {
         this.scene = scene;
         this.flowerHead = new THREE.Group();
-        this.petals = [];
+        this.innerPetals = [];
+        this.outerPetals = [];
+        this.centerGroup = new THREE.Group();
         this.leaves = [];
-        this.center = null;
         this.stemMesh = null;
         this.stemCurve = null;
 
@@ -16,7 +17,6 @@ class Flower {
             stemGrowth: 0,
             bloom: 0,
             rotation: 0,
-            colorHue: 0,
             speed: CONFIG.animation.baseSpeed
         };
     }
@@ -32,9 +32,9 @@ class Flower {
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
             points.push(new THREE.Vector3(
-                Math.sin(t * Math.PI * 0.5) * 0.1 * growth,
+                Math.sin(t * Math.PI * 0.5) * 0.15 * growth,
                 t * height,
-                Math.sin(t * Math.PI * 0.5) * 0.05 * growth
+                Math.sin(t * Math.PI * 0.5) * 0.08 * growth
             ));
         }
 
@@ -60,26 +60,31 @@ class Flower {
     }
 
     /**
-     * 创建单个花瓣
+     * 创建向日葵花瓣（长而尖）
      */
-    createPetal() {
+    createPetal(length, width) {
         const shape = new THREE.Shape();
+        // 向日葵花瓣形状：细长，尖端尖锐
         shape.moveTo(0, 0);
-        shape.bezierCurveTo(0.5, 0.8, 0.4, 1.8, 0, 2.5);
-        shape.bezierCurveTo(-0.4, 1.8, -0.5, 0.8, 0, 0);
+        shape.quadraticCurveTo(width * 0.3, length * 0.3, width * 0.5, length * 0.7);
+        shape.quadraticCurveTo(width * 0.6, length * 0.9, 0, length);
+        shape.quadraticCurveTo(-width * 0.6, length * 0.9, -width * 0.5, length * 0.7);
+        shape.quadraticCurveTo(-width * 0.3, length * 0.3, 0, 0);
 
         const extrudeSettings = {
             steps: 1,
-            depth: 0.05,
+            depth: 0.03,
             bevelEnabled: true,
-            bevelThickness: CONFIG.flower.petal.bevelThickness,
-            bevelSize: CONFIG.flower.petal.bevelSize,
-            bevelSegments: 5
+            bevelThickness: 0.02,
+            bevelSize: 0.02,
+            bevelSegments: 3
         };
 
         const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+        // 创建渐变材质（从黄色到橙色）
         const material = new THREE.MeshPhongMaterial({
-            color: CONFIG.flower.petal.color,
+            color: CONFIG.flower.petal.baseColor,
             shininess: CONFIG.flower.petal.shininess,
             side: THREE.DoubleSide
         });
@@ -90,45 +95,78 @@ class Flower {
         petal.receiveShadow = true;
         petal.visible = false;
 
+        // 存储原始属性
+        petal.userData = {
+            baseLength: length,
+            baseWidth: width
+        };
+
         return petal;
     }
 
     /**
-     * 创建花朵中心
+     * 创建向日葵中心（深褐色花盘）
      */
     createCenter() {
+        // 主花盘
         const geometry = new THREE.SphereGeometry(
             CONFIG.flower.center.radius,
-            CONFIG.flower.center.segments,
-            CONFIG.flower.center.segments
+            32,
+            32
         );
         const material = new THREE.MeshPhongMaterial({
-            color: CONFIG.flower.center.color,
-            shininess: CONFIG.flower.center.shininess
+            color: CONFIG.flower.center.baseColor,
+            shininess: 20
         });
 
-        this.center = new THREE.Mesh(geometry, material);
-        this.center.castShadow = true;
-        this.center.visible = false;
+        const center = new THREE.Mesh(geometry, material);
+        center.castShadow = true;
+        center.visible = false;
+        this.centerGroup.add(center);
 
-        return this.center;
+        // 添加小种子纹理（用小圆点模拟）
+        const seedGeometry = new THREE.SphereGeometry(CONFIG.flower.center.seedRadius, 8, 6);
+        const seedMaterial = new THREE.MeshPhongMaterial({
+            color: CONFIG.flower.center.seedColor
+        });
+
+        for (let i = 0; i < CONFIG.flower.center.seedCount; i++) {
+            const seed = new THREE.Mesh(seedGeometry, seedMaterial);
+
+            // 使用斐波那契螺旋分布种子
+            const angle = i * 2.39996; // 黄金角
+            const radius = CONFIG.flower.center.radius * Math.sqrt(i / CONFIG.flower.center.seedCount) * 0.85;
+
+            seed.position.x = Math.cos(angle) * radius;
+            seed.position.y = Math.sin(angle) * radius;
+            seed.position.z = CONFIG.flower.center.radius * 0.3;
+
+            seed.castShadow = true;
+            this.centerGroup.add(seed);
+        }
+
+        this.centerGroup.visible = false;
+        return this.centerGroup;
     }
 
     /**
-     * 创建叶子
+     * 创建向日葵叶子（大而宽）
      */
-    createLeaf() {
+    createLeaf(length, width) {
         const shape = new THREE.Shape();
+        // 向日葵叶子形状：宽大，心形
         shape.moveTo(0, 0);
-        shape.quadraticCurveTo(0.8, -0.3, 2, 0);
-        shape.quadraticCurveTo(0.8, 0.2, 0, 0);
+        shape.quadraticCurveTo(width * 0.5, -length * 0.2, width, 0);
+        shape.quadraticCurveTo(width * 0.7, length * 0.3, 0, length);
+        shape.quadraticCurveTo(-width * 0.7, length * 0.3, -width, 0);
+        shape.quadraticCurveTo(-width * 0.5, -length * 0.2, 0, 0);
 
         const extrudeSettings = {
             steps: 1,
-            depth: 0.03,
+            depth: 0.05,
             bevelEnabled: true,
-            bevelThickness: 0.05,
-            bevelSize: 0.05,
+            bevelThickness: 0.03,
+            bevelSize: 0.03,
             bevelSegments: 3
         };
 
@@ -145,37 +183,65 @@ class Flower {
         leaf.receiveShadow = true;
         leaf.visible = false;
 
+        leaf.userData = {
+            baseLength: length,
+            baseWidth: width
+        };
+
         return leaf;
     }
 
     /**
-     * 初始化花朵
+     * 初始化向日葵
      */
     init() {
         // 创建花茎（初始时不创建，等待更新时创建）
         this.stemMesh = null;
 
-        // 创建花瓣
-        for (let i = 0; i < CONFIG.flower.petal.count; i++) {
-            const petal = this.createPetal();
-            const angle = (Math.PI * 2 / CONFIG.flower.petal.count) * i;
-            petal.position.x = Math.cos(angle) * 0.1;
-            petal.position.z = Math.sin(angle) * 0.1;
+        // 创建内层花瓣
+        for (let i = 0; i < CONFIG.flower.petal.innerCount; i++) {
+            const petal = this.createPetal(
+                CONFIG.flower.petal.innerLength,
+                CONFIG.flower.petal.innerWidth
+            );
+            const angle = (Math.PI * 2 / CONFIG.flower.petal.innerCount) * i;
             petal.rotation.y = -angle + Math.PI / 2;
-            this.petals.push(petal);
+            this.innerPetals.push(petal);
             this.flowerHead.add(petal);
         }
 
-        // 创建花朵中心
-        this.center = this.createCenter();
-        this.flowerHead.add(this.center);
+        // 创建外层花瓣
+        for (let i = 0; i < CONFIG.flower.petal.outerCount; i++) {
+            const petal = this.createPetal(
+                CONFIG.flower.petal.outerLength,
+                CONFIG.flower.petal.outerWidth
+            );
+            const angle = (Math.PI * 2 / CONFIG.flower.petal.outerCount) * i + (Math.PI / CONFIG.flower.petal.outerCount);
+            petal.rotation.y = -angle + Math.PI / 2;
+            this.outerPetals.push(petal);
+            this.flowerHead.add(petal);
+        }
+
+        // 创建中心花盘
+        this.centerGroup = this.createCenter();
+        this.flowerHead.add(this.centerGroup);
 
         // 创建叶子
         for (let i = 0; i < CONFIG.flower.leaf.count; i++) {
-            const leaf = this.createLeaf();
-            leaf.position.y = CONFIG.flower.leaf.positionY;
-            leaf.rotation.x = Math.PI / 2 - 0.5 + i * 0.3;
-            leaf.rotation.y = i === 0 ? 0.3 : -0.3;
+            const leaf = this.createLeaf(
+                CONFIG.flower.leaf.baseLength,
+                CONFIG.flower.leaf.baseWidth
+            );
+
+            // 交替分布叶子
+            const yPos = CONFIG.flower.leaf.positionY[i];
+            leaf.position.y = yPos;
+
+            // 左右交替
+            const side = i % 2 === 0 ? 1 : -1;
+            leaf.rotation.x = Math.PI / 2 - 0.2;
+            leaf.rotation.y = side * 0.5;
+
             this.leaves.push(leaf);
             this.flowerHead.add(leaf);
         }
@@ -197,7 +263,7 @@ class Flower {
     }
 
     /**
-     * 更新花朵生长
+     * 更新向日葵生长
      */
     update(time) {
         // 茎生长阶段
@@ -221,46 +287,58 @@ class Flower {
 
         const bloom = this.state.bloom;
 
-        // 更新花瓣
-        this.petals.forEach((petal, index) => {
+        // 更新内层花瓣
+        this.innerPetals.forEach((petal, index) => {
             petal.visible = true;
-            const scale = 0.2 + bloom * 0.8;
+            const scale = 0.1 + bloom * 0.9;
             petal.scale.setScalar(scale);
 
-            const baseAngle = (Math.PI * 2 / this.petals.length) * index;
+            const baseAngle = (Math.PI * 2 / this.innerPetals.length) * index;
+            const currentAngle = baseAngle + this.state.rotation;
+
+            petal.position.x = Math.cos(currentAngle) * 0.15 * bloom;
+            petal.position.z = Math.sin(currentAngle) * 0.15 * bloom;
+            petal.position.y = Math.sin(time * 2 + index * 0.1) * 0.05 * bloom;
+
+            petal.rotation.y = -currentAngle + Math.PI / 2;
+            petal.rotation.x = Math.PI / 2 + Math.sin(time * 2 + index * 0.05) * 0.05;
+        });
+
+        // 更新外层花瓣
+        this.outerPetals.forEach((petal, index) => {
+            petal.visible = true;
+            const scale = 0.1 + bloom * 0.9;
+            petal.scale.setScalar(scale);
+
+            const baseAngle = (Math.PI * 2 / this.outerPetals.length) * index + (Math.PI / this.outerPetals.length);
             const currentAngle = baseAngle + this.state.rotation;
 
             petal.position.x = Math.cos(currentAngle) * 0.2 * bloom;
             petal.position.z = Math.sin(currentAngle) * 0.2 * bloom;
-            petal.position.y = Math.sin(time * 2 + index) * 0.1 * bloom;
+            petal.position.y = Math.sin(time * 2 + index * 0.1 + 0.5) * 0.05 * bloom;
 
             petal.rotation.y = -currentAngle + Math.PI / 2;
-            petal.rotation.x = Math.PI / 2 + Math.sin(time * 2 + index * 0.5) * 0.1;
-
-            const hue = (this.state.colorHue + index * 45) % 360;
-            petal.material.color.setHSL(hue / 360, 0.7, 0.5);
+            petal.rotation.x = Math.PI / 2 + Math.sin(time * 2 + index * 0.05 + 0.5) * 0.05;
         });
 
-        // 更新中心
-        this.center.visible = true;
-        const centerScale = 0.2 + bloom * 0.8;
-        this.center.scale.setScalar(centerScale);
-        const centerHue = (this.state.colorHue + 180) % 360;
-        this.center.material.color.setHSL(centerHue / 360, 0.8, 0.5);
+        // 更新中心花盘
+        this.centerGroup.visible = true;
+        const centerScale = 0.1 + bloom * 0.9;
+        this.centerGroup.scale.setScalar(centerScale);
 
         // 更新叶子
         this.leaves.forEach((leaf, index) => {
-            const leafBloom = Math.max(0, (bloom - 0.3) / 0.7);
+            const leafBloom = Math.max(0, (bloom - 0.2) / 0.8);
             leaf.visible = leafBloom > 0;
             leaf.scale.setScalar(leafBloom);
-            leaf.rotation.y = (index === 0 ? 0.3 : -0.3) + Math.sin(time + index) * 0.2;
-            leaf.position.y = CONFIG.flower.leaf.positionY + (1 - leafBloom) * 2.5;
+            leaf.rotation.y += Math.sin(time + index * 0.5) * 0.01;
+
+            const yPos = CONFIG.flower.leaf.positionY[index];
+            leaf.position.y = yPos + (1 - leafBloom) * 1.5;
         });
 
-        // 整体旋转和颜色变化
+        // 整体旋转
         this.state.rotation += CONFIG.animation.rotationSpeed * this.state.speed;
-        this.state.colorHue += CONFIG.animation.colorChangeSpeed * this.state.speed;
-        if (this.state.colorHue > 360) this.state.colorHue -= 360;
 
         return 40 + Math.floor(bloom * 60); // 返回进度
     }
@@ -272,11 +350,11 @@ class Flower {
         this.state.stemGrowth = 0;
         this.state.bloom = 0;
         this.state.rotation = 0;
-        this.state.colorHue = 0;
         this.state.speed = CONFIG.animation.baseSpeed;
 
-        this.petals.forEach(p => p.visible = false);
-        if (this.center) this.center.visible = false;
+        this.innerPetals.forEach(p => p.visible = false);
+        this.outerPetals.forEach(p => p.visible = false);
+        this.centerGroup.visible = false;
         this.leaves.forEach(l => l.visible = false);
         this.flowerHead.visible = false;
 

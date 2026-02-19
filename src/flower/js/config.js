@@ -8,8 +8,8 @@ const CONFIG = {
         baseSeed: 42,
         maxGeneration: 4,
         maxFlowers: 50,
-        reproductionInterval: 5, // 繁衍间隔（秒）
-        growthDuration: 60 // 生长时长（秒）
+        reproductionInterval: 3, // 繁衍间隔（秒）
+        growthDuration: 10 // 生长时长（秒）
     },
 
     // 确定性随机数生成器参数（LCG算法）
