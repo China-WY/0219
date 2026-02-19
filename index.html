@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>花朵动画系统 - 演示选择</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a3a 0%, #0a0a1a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 50px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .card p {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .features {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        footer {
+            margin-top: 50px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+        }
+
+        footer a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>花朵动画系统</h1>
+        <div class="subtitle">基于数学函数驱动的可生长、可繁衍虚拟花朵系统</div>
+
+        <div class="cards">
+            <a href="src/particle/index.html" class="card">
+                <div class="card-icon">🌸</div>
+                <h2>3D 花朵动画</h2>
+                <p>使用 Three.js 构建的 3D 花朵生长演示，支持交互式视角控制和动态生长效果。</p>
+                <div class="features">
+                    <span class="feature">Three.js</span>
+                    <span class="feature">3D渲染</span>
+                    <span class="feature">交互控制</span>
+                </div>
+            </a>
+
+            <a href="src/flower/index.html" class="card">
+                <div class="card-icon">🌺</div>
+                <h2>纯函数花朵系统</h2>
+                <p>基于纯函数驱动的 Canvas 2D 花朵系统，具有确定性生长和繁衍机制。</p>
+                <div class="features">
+                    <span class="feature">Canvas 2D</span>
+                    <span class="feature">纯函数</span>
+                    <span class="feature">自动繁衍</span>
+                </div>
+            </a>
+        </div>
+
+        <footer>
+            <p>技术规范: <a href="docs/SPEC.md">查看 SPEC.md</a></p>
+        </footer>
+    </div>
+</body>
+</html>

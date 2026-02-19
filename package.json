@@ -1,0 +1,24 @@
+{
+    "name": "flower-animation-system",
+    "version": "1.0.0",
+    "description": "基于数学函数驱动的可生长、可繁衍虚拟花朵系统",
+    "main": "index.html",
+    "scripts": {
+        "start": "npx serve . -p 8080",
+        "open:particle": "npx serve src/particle -p 8081",
+        "open:flower": "npx serve src/flower -p 8082"
+    },
+    "keywords": [
+        "flower",
+        "animation",
+        "canvas",
+        "threejs",
+        "generative-art",
+        "pure-functions"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "serve": "^14.2.0"
+    }
+}

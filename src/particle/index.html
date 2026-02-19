@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 随时间变化的花朵 - 自然生长</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="info">拖动鼠标旋转视角 | 滚轮缩放 | 花朵从土壤自然生长</div>
+    <div class="progress" id="progressText">生长进度: 0%</div>
+    <div id="container"></div>
+    <div class="controls">
+        <button id="resetBtn">重新种植</button>
+        <button id="speedUpBtn">加速生长</button>
+        <button id="slowDownBtn">减缓生长</button>
+    </div>
+
+    <!-- Three.js 核心库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 轨道控制器 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- 应用脚本 -->
+    <script src="js/config.js"></script>
+    <script src="js/scene.js"></script>
+    <script src="js/environment.js"></script>
+    <script src="js/flower.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
