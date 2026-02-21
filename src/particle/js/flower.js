@@ -5,7 +5,8 @@
 class Flower {
     constructor(scene) {
         this.scene = scene;
-        this.flowerHead = new THREE.Group();
+        this.flowerHead = new THREE.Group();  // 花瓣和中心
+        this.leafGroup = new THREE.Group();      // 叶子独立组，避免碰撞
         this.innerPetals = [];
         this.outerPetals = [];
         this.centerGroup = new THREE.Group();
@@ -316,29 +317,27 @@ class Flower {
                 CONFIG.flower.leaf.baseWidth
             );
 
-            // 交替分布叶子
-            const yPos = CONFIG.flower.leaf.positionY[i];
-            leaf.position.y = yPos;
-
-            // 左右交替，使用更大的角度展开
-            const side = i % 2 === 0 ? 1 : -1;
-            const angleSpread = CONFIG.flower.leaf.angleSpread || 0.6;
-            leaf.rotation.x = Math.PI / 2 - 0.3;
-            leaf.rotation.y = side * angleSpread;
-            // 保存基础旋转角度
+            // 保存叶子的原始位置和角度数据
             leaf.userData = {
+                yPos: CONFIG.flower.leaf.positionY[i],
                 baseLength: CONFIG.flower.leaf.baseLength,
                 baseWidth: CONFIG.flower.leaf.baseWidth,
-                baseRotationY: side * angleSpread
+                side: i % 2 === 0 ? 1 : -1,
+                angleSpread: CONFIG.flower.leaf.angleSpread || 0.6,
+                baseRotationY: (i % 2 === 0 ? 1 : -1) * (CONFIG.flower.leaf.angleSpread || 0.6)
             };
 
             this.leaves.push(leaf);
-            this.flowerHead.add(leaf);
+            // 将叶子添加到独立组，而不是 flowerHead
+            this.leafGroup.add(leaf);
         }
 
+        // 将两个组添加到场景
         this.flowerHead.position.y = 0;
         this.flowerHead.visible = false;
+        this.leafGroup.visible = false;
         this.scene.add(this.flowerHead);
+        this.scene.add(this.leafGroup);
     }
 
     /**
@@ -420,16 +419,44 @@ class Flower {
         const centerScale = 0.1 + bloom * 0.9;
         this.centerGroup.scale.setScalar(centerScale);
 
-        // 更新叶子
+        // 更新叶子 - 叶子独立于花朵头部，避免碰撞
+        const growth = this.state.stemGrowth;
+        const stemHeight = growth * CONFIG.flower.stem.baseHeight;
+
         this.leaves.forEach((leaf, index) => {
             const leafBloom = Math.max(0, (bloom - 0.2) / 0.8);
-            leaf.visible = leafBloom > 0;
+            leaf.visible = leafBloom > 0 && growth > 0.3;
             leaf.scale.setScalar(leafBloom);
-            // 移除持续旋转，只保留极轻微的风动效果
-            leaf.rotation.y = (leaf.userData?.baseRotationY || leaf.rotation.y) + Math.sin(time * 0.5 + index * 0.5) * 0.005;
 
-            const yPos = CONFIG.flower.leaf.positionY[index];
-            leaf.position.y = yPos + (1 - leafBloom) * 1.5;
+            // 从 userData 获取叶子数据
+            const data = leaf.userData;
+            const side = data.side;
+            const baseAngle = data.angleSpread;
+            const yPos = data.yPos;
+
+            // 计算叶子在世界空间中的绝对 Y 位置（基于花茎高度）
+            const absoluteY = stemHeight + yPos;
+
+            // 叶子需要跟随花茎的弯曲，但不随花朵头部旋转
+            // 使用花茎曲线来计算叶子位置
+            const t = (absoluteY / CONFIG.flower.stem.baseHeight) * 0.8;  // 沿花茎的比例
+            const stemX = Math.sin(t * Math.PI * 0.5) * 0.2 * growth +
+                          Math.sin(t * Math.PI * 1.5) * 0.08 * growth +
+                          Math.pow(t, 2.5) * 0.12 * growth;
+            const stemZ = Math.sin(t * Math.PI * 0.8) * 0.1 * growth;
+
+            // 叶子相对于花茎的位置（从根部稍微偏移）
+            leaf.position.set(
+                stemX + side * 0.15,  // 稍微偏离花茎中心
+                yPos,                   // 相对于花茎顶部的位置
+                stemZ                    // 跟随花茎的 Z 弯曲
+            );
+
+            // 叶子朝向：左侧叶子向左，右侧叶子向右
+            leaf.rotation.x = Math.PI / 2 - 0.3;
+            leaf.rotation.y = side * baseAngle;
+            // 轻微风动效果
+            leaf.rotation.z = Math.sin(time * 0.5 + index * 0.5) * 0.02;
         });
 
         // 整体旋转
@@ -452,6 +479,7 @@ class Flower {
         this.centerGroup.visible = false;
         this.leaves.forEach(l => l.visible = false);
         this.flowerHead.visible = false;
+        this.leafGroup.visible = false;  // 重置叶子组可见性
 
         if (this.stemMesh) {
             this.scene.remove(this.stemMesh);
