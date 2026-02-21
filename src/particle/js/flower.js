@@ -375,6 +375,8 @@ class Flower {
         }
 
         const bloom = this.state.bloom;
+        const growth = this.state.stemGrowth;
+        const stemHeight = growth * CONFIG.flower.stem.baseHeight;
 
         // 更新内层花瓣
         this.innerPetals.forEach((petal, index) => {
@@ -419,10 +421,7 @@ class Flower {
         const centerScale = 0.1 + bloom * 0.9;
         this.centerGroup.scale.setScalar(centerScale);
 
-        // 更新叶子 - 叶子独立于花朵头部，避免碰撞
-        const growth = this.state.stemGrowth;
-        const stemHeight = growth * CONFIG.flower.stem.baseHeight;
-
+        // 更新叶子 - 使用绝对世界坐标，避免与花瓣碰撞
         this.leaves.forEach((leaf, index) => {
             const leafBloom = Math.max(0, (bloom - 0.2) / 0.8);
             leaf.visible = leafBloom > 0 && growth > 0.3;
@@ -431,33 +430,38 @@ class Flower {
             // 从 userData 获取叶子数据
             const data = leaf.userData;
             const side = data.side;
-            const baseAngle = data.angleSpread;
-            const yPos = data.yPos;
+            const yPos = data.yPos;  // 叶子沿花茎的相对高度
 
-            // 计算叶子在世界空间中的绝对 Y 位置（基于花茎高度）
-            const absoluteY = stemHeight + yPos;
-
-            // 叶子需要跟随花茎的弯曲，但不随花朵头部旋转
-            // 使用花茎曲线来计算叶子位置
-            const t = (absoluteY / CONFIG.flower.stem.baseHeight) * 0.8;  // 沿花茎的比例
+            // 计算花茎在该高度的弯曲位置
+            const t = Math.max(0, Math.min(1, (stemHeight + yPos) / CONFIG.flower.stem.baseHeight));
             const stemX = Math.sin(t * Math.PI * 0.5) * 0.2 * growth +
                           Math.sin(t * Math.PI * 1.5) * 0.08 * growth +
                           Math.pow(t, 2.5) * 0.12 * growth;
             const stemZ = Math.sin(t * Math.PI * 0.8) * 0.1 * growth;
 
-            // 叶子相对于花茎的位置（从根部稍微偏移）
-            leaf.position.set(
-                stemX + side * 0.15,  // 稍微偏离花茎中心
-                yPos,                   // 相对于花茎顶部的位置
-                stemZ                    // 跟随花茎的 Z 弯曲
-            );
+            // 叶子的世界坐标位置（直接设置，不使用 leafGroup 的相对坐标）
+            // 叶子根部在花茎上，向侧面展开
+            const leafRootX = stemX;
+            const leafRootY = stemHeight + yPos;
+            const leafRootZ = stemZ;
 
-            // 叶子朝向：左侧叶子向左，右侧叶子向右
-            leaf.rotation.x = Math.PI / 2 - 0.3;
-            leaf.rotation.y = side * baseAngle;
-            // 轻微风动效果
-            leaf.rotation.z = Math.sin(time * 0.5 + index * 0.5) * 0.02;
+            // 叶子向侧面展开，避免与花头重叠
+            const leafExtendX = side * 1.2;  // 更大的侧向展开
+            const leafExtendZ = side * 0.3;
+
+            // 计算叶子位置（世界坐标）
+            leaf.position.set(leafRootX + leafExtendX, leafRootY, leafRootZ + leafExtendZ);
+
+            // 叶子朝向调整：指向侧面并稍微向上
+            leaf.rotation.set(
+                Math.PI / 2 - 0.4,  // 向上倾斜
+                side * 0.8,              // 向侧面展开
+                Math.sin(time * 0.3 + index * 0.3) * 0.03  // 轻微风动
+            );
         });
+
+        // 更新叶子组位置跟随花茎
+        this.leafGroup.position.set(0, stemHeight, 0);
 
         // 整体旋转
         this.state.rotation += CONFIG.animation.rotationSpeed * this.state.speed;
