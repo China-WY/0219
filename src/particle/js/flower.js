@@ -14,6 +14,11 @@ class Flower {
         this.stemMesh = null;
         this.stemCurve = null;
 
+        // 碰撞检测相关
+        this.collisionCount = 0;
+        this.lastCollisionCheck = 0;
+        this.collisionInfoElement = null;
+
         this.state = {
             stemGrowth: 0,
             bloom: 0,
@@ -42,12 +47,22 @@ class Flower {
      * 碰撞检测和避免算法
      */
     resolveCollisions() {
+        // 限制碰撞检测频率（每 10 帧一次）
+        const now = Date.now();
+        if (now - this.lastCollisionCheck < 100) {
+            return;
+        }
+        this.lastCollisionCheck = now;
+
         // 获取花头的包围盒（包含所有花瓣和中心）
         const flowerHeadBox = new THREE.Box3();
         flowerHeadBox.setFromObject(this.flowerHead);
 
         // 叶子之间以及叶子与花头之间的碰撞检测
         const resolvedPositions = new Map();
+        let totalCollisions = 0;  // 本次检测的总碰撞次数
+
+        this.leaves.forEach((leaf, leafIndex) => {
 
         this.leaves.forEach((leaf, leafIndex) => {
             const data = leaf.userData;
@@ -161,7 +176,26 @@ class Flower {
                 leaf.rotation.copy(bestRotation);
                 resolvedPositions.set(leafIndex, bestPosition.clone());
             }
+
+            // 累计碰撞次数
+            totalCollisions += Math.floor(minCollisionPenalty / 50);  // 每次碰撞增加计数
         });
+
+        // 更新碰撞计数和显示
+        this.collisionCount = totalCollisions;
+        this.updateCollisionDisplay();
+    }
+
+    /**
+     * 更新碰撞检测次数显示
+     */
+    updateCollisionDisplay() {
+        if (!this.collisionInfoElement) {
+            this.collisionInfoElement = document.getElementById('collisionInfo');
+        }
+        if (this.collisionInfoElement) {
+            this.collisionInfoElement.textContent = `碰撞检测: ${this.collisionCount}`;
+        }
     }
 
     /**
