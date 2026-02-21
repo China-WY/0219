@@ -95,11 +95,12 @@ const CONFIG = {
         },
         leaf: {
             count: 4,
-            baseLength: 2.5,
-            baseWidth: 2.0,
+            baseLength: 2.2,  // 稍微缩小避免重叠
+            baseWidth: 1.6,   // 稍微变窄避免重叠
             color: 0x3d7a2d,
             shininess: 40,
-            positionY: [-2.5, -1.5, -0.5, 0.5]
+            positionY: [-2.8, -1.8, -0.8, 0.2],  // 调整位置间距
+            angleSpread: 0.6  // 叶子展开角度
         }
     },
 
@@ -108,9 +109,11 @@ const CONFIG = {
         baseSpeed: 1.0,
         minSpeed: 0.2,
         maxSpeed: 5.0,
-        stemGrowthRate: 0.008,
-        bloomGrowthRate: 0.01,
-        rotationSpeed: 0.003,
+        stemGrowthRate: 0.005,  // 降低生长速度
+        bloomGrowthRate: 0.006,  // 降低绽放速度
+        rotationSpeed: 0,          // 禁用整体旋转
+        petalWaveSpeed: 0.3,      // 花瓣轻微摆动
+        petalWaveAmplitude: 0.02, // 花瓣摆动幅度
         colorChangeSpeed: 0.1
     }
 };

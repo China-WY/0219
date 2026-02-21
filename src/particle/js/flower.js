@@ -320,10 +320,17 @@ class Flower {
             const yPos = CONFIG.flower.leaf.positionY[i];
             leaf.position.y = yPos;
 
-            // 左右交替
+            // 左右交替，使用更大的角度展开
             const side = i % 2 === 0 ? 1 : -1;
-            leaf.rotation.x = Math.PI / 2 - 0.2;
-            leaf.rotation.y = side * 0.5;
+            const angleSpread = CONFIG.flower.leaf.angleSpread || 0.6;
+            leaf.rotation.x = Math.PI / 2 - 0.3;
+            leaf.rotation.y = side * angleSpread;
+            // 保存基础旋转角度
+            leaf.userData = {
+                baseLength: CONFIG.flower.leaf.baseLength,
+                baseWidth: CONFIG.flower.leaf.baseWidth,
+                baseRotationY: side * angleSpread
+            };
 
             this.leaves.push(leaf);
             this.flowerHead.add(leaf);
@@ -377,14 +384,16 @@ class Flower {
             petal.scale.setScalar(scale);
 
             const baseAngle = (Math.PI * 2 / this.innerPetals.length) * index;
+            // 移除整体旋转，只保留轻微的自然摆动
             const currentAngle = baseAngle + this.state.rotation;
 
             petal.position.x = Math.cos(currentAngle) * 0.15 * bloom;
             petal.position.z = Math.sin(currentAngle) * 0.15 * bloom;
-            petal.position.y = Math.sin(time * 2 + index * 0.1) * 0.05 * bloom;
+            // 轻微摆动，大幅降低幅度
+            petal.position.y = Math.sin(time * CONFIG.animation.petalWaveSpeed + index * 0.1) * CONFIG.animation.petalWaveAmplitude * bloom;
 
             petal.rotation.y = -currentAngle + Math.PI / 2;
-            petal.rotation.x = Math.PI / 2 + Math.sin(time * 2 + index * 0.05) * 0.05;
+            petal.rotation.x = Math.PI / 2 + Math.sin(time * CONFIG.animation.petalWaveSpeed + index * 0.05) * CONFIG.animation.petalWaveAmplitude;
         });
 
         // 更新外层花瓣
@@ -394,14 +403,16 @@ class Flower {
             petal.scale.setScalar(scale);
 
             const baseAngle = (Math.PI * 2 / this.outerPetals.length) * index + (Math.PI / this.outerPetals.length);
+            // 移除整体旋转，只保留轻微的自然摆动
             const currentAngle = baseAngle + this.state.rotation;
 
             petal.position.x = Math.cos(currentAngle) * 0.2 * bloom;
             petal.position.z = Math.sin(currentAngle) * 0.2 * bloom;
-            petal.position.y = Math.sin(time * 2 + index * 0.1 + 0.5) * 0.05 * bloom;
+            // 轻微摆动，大幅降低幅度
+            petal.position.y = Math.sin(time * CONFIG.animation.petalWaveSpeed + index * 0.1 + 0.5) * CONFIG.animation.petalWaveAmplitude * bloom;
 
             petal.rotation.y = -currentAngle + Math.PI / 2;
-            petal.rotation.x = Math.PI / 2 + Math.sin(time * 2 + index * 0.05 + 0.5) * 0.05;
+            petal.rotation.x = Math.PI / 2 + Math.sin(time * CONFIG.animation.petalWaveSpeed + index * 0.05 + 0.5) * CONFIG.animation.petalWaveAmplitude;
         });
 
         // 更新中心花盘
@@ -414,7 +425,8 @@ class Flower {
             const leafBloom = Math.max(0, (bloom - 0.2) / 0.8);
             leaf.visible = leafBloom > 0;
             leaf.scale.setScalar(leafBloom);
-            leaf.rotation.y += Math.sin(time + index * 0.5) * 0.01;
+            // 移除持续旋转，只保留极轻微的风动效果
+            leaf.rotation.y = (leaf.userData?.baseRotationY || leaf.rotation.y) + Math.sin(time * 0.5 + index * 0.5) * 0.005;
 
             const yPos = CONFIG.flower.leaf.positionY[index];
             leaf.position.y = yPos + (1 - leafBloom) * 1.5;
