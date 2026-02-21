@@ -23,6 +23,148 @@ class Flower {
     }
 
     /**
+     * 计算包围盒
+     */
+    getBoundingBox(mesh) {
+        const box = new THREE.Box3();
+        box.setFromObject(mesh);
+        return box;
+    }
+
+    /**
+     * 检测两个包围盒是否相交
+     */
+    boxesIntersect(box1, box2) {
+        return box1.intersectsBox(box2);
+    }
+
+    /**
+     * 碰撞检测和避免算法
+     */
+    resolveCollisions() {
+        // 获取花头的包围盒（包含所有花瓣和中心）
+        const flowerHeadBox = new THREE.Box3();
+        flowerHeadBox.setFromObject(this.flowerHead);
+
+        // 叶子之间以及叶子与花头之间的碰撞检测
+        const resolvedPositions = new Map();
+
+        this.leaves.forEach((leaf, leafIndex) => {
+            const data = leaf.userData;
+
+            // 初始目标位置
+            const t = Math.max(0, Math.min(1, (this.state.stemGrowth * CONFIG.flower.stem.baseHeight + data.yPos) / CONFIG.flower.stem.baseHeight));
+            const stemX = Math.sin(t * Math.PI * 0.5) * 0.2 * this.state.stemGrowth +
+                          Math.sin(t * Math.PI * 1.5) * 0.08 * this.state.stemGrowth +
+                          Math.pow(t, 2.5) * 0.12 * this.state.stemGrowth;
+            const stemZ = Math.sin(t * Math.PI * 0.8) * 0.1 * this.state.stemGrowth;
+
+            const leafRootY = this.state.stemGrowth * CONFIG.flower.stem.baseHeight + data.yPos;
+            const stemHeight = this.state.stemGrowth * CONFIG.flower.stem.baseHeight;
+
+            // 尝试不同的侧向展开角度，找到无碰撞的位置
+            const side = data.side;
+            let bestPosition = null;
+            let bestRotation = null;
+            let minCollisionPenalty = Infinity;
+
+            // 尝试多个角度和位置
+            const angleTries = 5;
+            const positionTries = 3;
+
+            for (let a = 0; a < angleTries; a++) {
+                const angleSpread = 0.3 + a * 0.25;  // 从 0.3 到 1.2 的不同角度
+
+                for (let p = 0; p < positionTries; p++) {
+                    const offsetMultiplier = 0.8 + p * 0.4;  // 从 0.8 到 1.6 的不同偏移
+
+                    // 计算候选位置
+                    const leafExtendX = side * angleSpread * offsetMultiplier;
+                    const leafExtendZ = side * 0.25 * offsetMultiplier;
+                    const candidatePosition = new THREE.Vector3(
+                        stemX + leafExtendX,
+                        leafRootY,
+                        stemZ + leafExtendZ
+                    );
+
+                    // 设置临时位置和旋转来检测碰撞
+                    const originalPos = leaf.position.clone();
+                    const originalRot = leaf.rotation.clone();
+                    leaf.position.copy(candidatePosition);
+                    leaf.rotation.set(
+                        Math.PI / 2 - 0.3,
+                        side * angleSpread,
+                        0
+                    );
+
+                    // 获取叶子的包围盒
+                    const leafBox = this.getBoundingBox(leaf);
+
+                    // 计算碰撞惩罚（与花头和其他叶子的重叠程度）
+                    let collisionPenalty = 0;
+
+                    // 检测与花头的碰撞
+                    if (flowerHeadBox.intersectsBox(leafBox)) {
+                        collisionPenalty += 100;  // 与花头碰撞是高惩罚
+                    }
+
+                    // 检测与其他叶子的碰撞
+                    for (let j = 0; j < this.leaves.length; j++) {
+                        if (j === leafIndex) continue;
+
+                        const otherLeaf = this.leaves[j];
+                        if (!otherLeaf.visible) continue;
+
+                        const otherPos = resolvedPositions.get(j) || otherLeaf.position.clone();
+
+                        // 使用其他叶子的位置来创建临时包围盒
+                        const tempPos = otherLeaf.position.clone();
+                        otherLeaf.position.copy(tempPos);
+
+                        const otherBox = this.getBoundingBox(otherLeaf);
+
+                        // 恢复其他叶子位置
+                        otherLeaf.position.copy(otherPos);
+
+                        if (this.boxesIntersect(leafBox, otherBox)) {
+                            collisionPenalty += 50;  // 叶子间碰撞是中等惩罚
+                        }
+                    }
+
+                    // 计算到花头的距离（越远越好，但也不能太远）
+                    const distanceToCenter = candidatePosition.distanceTo(new THREE.Vector3(0, stemHeight, 0));
+                    const idealDistance = 1.5;  // 理想距离
+                    const distancePenalty = Math.abs(distanceToCenter - idealDistance) * 10;
+
+                    collisionPenalty += distancePenalty;
+
+                    // 如果这是最好的位置
+                    if (collisionPenalty < minCollisionPenalty) {
+                        minCollisionPenalty = collisionPenalty;
+                        bestPosition = candidatePosition.clone();
+                        bestRotation = new THREE.Euler(
+                            Math.PI / 2 - 0.3,
+                            side * angleSpread,
+                            0
+                        );
+                    }
+
+                    // 恢复叶子原始位置
+                    leaf.position.copy(originalPos);
+                    leaf.rotation.copy(originalRot);
+                }
+            }
+
+            // 应用最好的无碰撞位置
+            if (bestPosition && bestRotation) {
+                leaf.position.copy(bestPosition);
+                leaf.rotation.copy(bestRotation);
+                resolvedPositions.set(leafIndex, bestPosition.clone());
+            }
+        });
+    }
+
+    /**
      * 创建花茎（使用三次样条曲线模拟自然弯曲）
      */
     createStem(growth = 1) {
@@ -459,6 +601,9 @@ class Flower {
                 Math.sin(time * 0.3 + index * 0.3) * 0.03  // 轻微风动
             );
         });
+
+        // 执行碰撞检测和避免
+        this.resolveCollisions();
 
         // 更新叶子组位置跟随花茎
         this.leafGroup.position.set(0, stemHeight, 0);
